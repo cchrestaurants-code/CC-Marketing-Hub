@@ -5,14 +5,14 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwK9M4ZW_BvglI_Jnuc4d4g
 
 // ── FY CONFIGURATION ──────────────────────────────────────
 // Supported FY years — add future years here as needed
-const FY_OPTIONS = [2024, 2025, 2026, 2027, 2028];
+const FY_OPTIONS = [2025, 2026, 2027, 2028, 2029];
 const FY_MONTHS  = ['April','May','June','July','August','September','October','November','December','January','February','March'];
 const FY_SHORT   = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
 
 // Active FY — reads from localStorage so it persists across pages
 function getActiveFY() {
   const stored = parseInt(localStorage.getItem('cc_active_fy'));
-  return FY_OPTIONS.includes(stored) ? stored : 2026;
+  return FY_OPTIONS.includes(stored) ? stored : 2025;
 }
 function setActiveFY(yr) {
   localStorage.setItem('cc_active_fy', yr);
@@ -85,20 +85,24 @@ function clearSession() {
 function requireAuth() {
   const s = getSession();
   if (!s || !s.token) { window.location.href = '../index.html'; return null; }
-  // 24-hour session expiry check
-  if (s.created_at && (Date.now() - s.created_at) > SESSION_DURATION_MS) {
-    clearSession();
-    window.location.href = '../index.html?expired=1';
-    return null;
-  }
-  // Start session watchdog — auto-logout when tab is active and session expires
-  const remaining = SESSION_DURATION_MS - (Date.now() - (s.created_at || Date.now()));
-  if (remaining > 0) {
+  // 24-hour expiry — only enforce if created_at exists
+  if (s.created_at) {
+    const elapsed = Date.now() - s.created_at;
+    if (elapsed > SESSION_DURATION_MS) {
+      clearSession();
+      window.location.href = '../index.html?expired=1';
+      return null;
+    }
+    // Watchdog: auto-logout when timer fires
     setTimeout(() => {
       clearSession();
-      alert('Your session has expired after 24 hours. Please log in again.');
+      alert('Your session has expired. Please log in again.');
       window.location.href = '../index.html?expired=1';
-    }, remaining);
+    }, SESSION_DURATION_MS - elapsed);
+  } else {
+    // Stamp missing created_at so 24hr starts now
+    s.created_at = Date.now();
+    localStorage.setItem('cc_session', JSON.stringify(s));
   }
   return s;
 }
