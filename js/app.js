@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // CONFIGURATION — replace with your deployed Apps Script URL
 // ═══════════════════════════════════════════════════════════
-const API_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwK9M4ZW_BvglI_Jnuc4d4gwRNOlrK7NxihaYwn_7ct4OgvRh2mwwfycTvmhQ5qs--J6Q/exec';
 
 // ── FY CONFIGURATION ──────────────────────────────────────
 // Supported FY years — add future years here as needed
