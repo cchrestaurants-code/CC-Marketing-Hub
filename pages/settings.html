@@ -135,7 +135,20 @@
 <script>
 document.getElementById('sidebar').innerHTML = getSidebarHTML('settings');
 const sess = requireAuth();
-if(sess?.role !== 'admin'){ alert('Admin access required.');window.location.href='dashboard.html'; }
+// Admin-only page — redirect non-admins with full debug info
+if (!sess) {
+  alert('No session found. Please log in again.');
+  window.location.href = '../index.html';
+} else if (sess.role !== 'admin') {
+  const msg = 'Settings requires admin role.\n\nYour current session:\n' +
+    'Username: ' + (sess.username || 'unknown') + '\n' +
+    'Role: ' + (sess.role || 'MISSING - this is the bug') + '\n\n' +
+    'Fix: Open browser console (F12), paste this and press Enter:\n' +
+    'localStorage.removeItem(\'cc_session\'); location.href=\'../index.html\';\n\nThen log in again with admin/CCMarketing2026!';
+  alert(msg);
+  window.location.href = 'dashboard.html';
+}
+const canEdit = true; // admin always can edit
 let D={};
 
 async function load(){

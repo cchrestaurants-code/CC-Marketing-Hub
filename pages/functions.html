@@ -713,11 +713,11 @@ function renderFollowupAlerts() {
   const today = todayStr();
   const inqs  = D.inquiries||[];
   const active = ['Pending','Details Shared','Postponed'];
-  const overdue = inqs.filter(x=>x.followup_date&&x.followup_date<today&&active.includes(x.status));
-  const dueToday= inqs.filter(x=>x.followup_date===today&&active.includes(x.status));
+  const overdue = inqs.filter(x=>x.followup_date&&fmtDate(x.followup_date)<today&&active.includes(x.status));
+  const dueToday= inqs.filter(x=>fmtDate(x.followup_date)===today&&active.includes(x.status));
   let html='';
   if(dueToday.length)  html += `<div class="alert al-a">📅 <strong>${dueToday.length} follow-up${dueToday.length>1?'s':''} due today:</strong> ${dueToday.map(x=>x.guest_name).join(', ')}</div>`;
-  if(overdue.length)   html += `<div class="alert al-r">⚠ <strong>${overdue.length} overdue follow-up${overdue.length>1?'s':''}</strong> (not actioned): ${overdue.map(x=>x.guest_name+' ('+x.followup_date+')').join(', ')}</div>`;
+  if(overdue.length)   html += `<div class="alert al-r">⚠ <strong>${overdue.length} overdue follow-up${overdue.length>1?'s':''}</strong> (not actioned): ${overdue.map(x=>x.guest_name+' ('+fmtDate(x.followup_date)+')').join(', ')}</div>`;
   document.getElementById('fu-alerts').innerHTML = html;
 }
 function todayStr() { return new Date().toISOString().split('T')[0]; }
@@ -745,8 +745,8 @@ function renderInquiries() {
 
   // Sort: overdue first, then by inquiry date desc
   const sorted = all.slice().sort((a,b)=>{
-    const aO = a.followup_date&&a.followup_date<today&&['Pending','Details Shared','Postponed'].includes(a.status)?0:1;
-    const bO = b.followup_date&&b.followup_date<today&&['Pending','Details Shared','Postponed'].includes(b.status)?0:1;
+    const aO = a.followup_date&&fmtDate(a.followup_date)<today&&['Pending','Details Shared','Postponed'].includes(a.status)?0:1;
+    const bO = b.followup_date&&fmtDate(b.followup_date)<today&&['Pending','Details Shared','Postponed'].includes(b.status)?0:1;
     if(aO!==bO) return aO-bO;
     return new Date(b.inquiry_date||0)-new Date(a.inquiry_date||0);
   });
@@ -755,7 +755,7 @@ function renderInquiries() {
   let cards='';
   sorted.forEach(inq=>{
     const isRepeat = isRepeatGuest(inq);
-    const fDate    = inq.followup_date;
+    const fDate    = fmtDate(inq.followup_date);
     const active   = ['Pending','Details Shared','Postponed'].includes(inq.status);
     const isOverdue     = fDate&&fDate<today&&active;
     const isTodayFu     = fDate===today&&active;
@@ -786,7 +786,7 @@ function renderInquiries() {
         <div class="inq-detail-row"><span class="dl">Menu</span><span class="dv">${inq.menu_type||'—'}</span></div>
         <div class="inq-detail-row"><span class="dl">Source</span><span class="dv">${inq.source||'—'}</span></div>
         ${totRev>0?`<div class="inq-detail-row"><span class="dl">Revenue</span><span class="dv" style="color:var(--green);font-weight:600">${fmt(totRev)}</span></div>`:''}
-        ${inq.inquiry_date?`<div class="inq-detail-row"><span class="dl">Inquired</span><span class="dv">${inq.inquiry_date}</span></div>`:''}
+        ${inq.inquiry_date?`<div class="inq-detail-row"><span class="dl">Inquired</span><span class="dv">${fmtDate(inq.inquiry_date)}</span></div>`:''}
       </div>
       ${inq.remarks?`<div class="inq-remarks">${inq.remarks}</div>`:''}
       <div class="inq-actions">
@@ -802,7 +802,7 @@ function renderInquiries() {
   let rows='';
   sorted.forEach(inq=>{
     const isRepeat = isRepeatGuest(inq);
-    const fDate    = inq.followup_date;
+    const fDate    = fmtDate(inq.followup_date);
     const today2   = todayStr();
     const fuStyle  = fDate&&fDate<today2&&['Pending','Details Shared','Postponed'].includes(inq.status)?'color:var(--red);font-weight:600':
                      fDate===today2?'color:var(--amber);font-weight:600':'';
@@ -1044,7 +1044,7 @@ function prefillFromGuest(id,ctx){
     document.getElementById('inq-search-results').innerHTML='';
     const hist=(D.inquiries||[]).filter(i=>i.phone===x.phone&&i.id!==id).slice(0,4);
     document.getElementById('inq-repeat-panel').style.display='block';
-    document.getElementById('inq-repeat-list').innerHTML=hist.map(h=>`<div>• ${h.event_type||'—'} · ${h.event_date||'TBD'} · ${h.status} · ${h.venue||'—'} · Inquired: ${h.inquiry_date||'—'}</div>`).join('');
+    document.getElementById('inq-repeat-list').innerHTML=hist.map(h=>`<div>• ${h.event_type||'—'} · ${fmtDate(h.event_date)||'TBD'} · ${h.status} · ${h.venue||'—'} · Inquired: ${fmtDate(h.inquiry_date)||'—'}</div>`).join('');
   }
 }
 function checkRepeatByName(v){
@@ -1054,7 +1054,7 @@ function checkRepeatByName(v){
   if(prev.length){
     document.getElementById('inq-repeat-flag').style.display='block';
     document.getElementById('inq-repeat-panel').style.display='block';
-    document.getElementById('inq-repeat-list').innerHTML=prev.slice(0,3).map(h=>`<div>• ${h.event_type||'—'} · ${h.event_date||'TBD'} · ${h.status}</div>`).join('');
+    document.getElementById('inq-repeat-list').innerHTML=prev.slice(0,3).map(h=>`<div>• ${h.event_type||'—'} · ${fmtDate(h.event_date)||'TBD'} · ${h.status}</div>`).join('');
   }
 }
 function checkRepeatByPhone(v){
@@ -1063,7 +1063,7 @@ function checkRepeatByPhone(v){
   if(prev.length){
     document.getElementById('inq-repeat-flag').style.display='block';
     document.getElementById('inq-repeat-panel').style.display='block';
-    document.getElementById('inq-repeat-list').innerHTML=prev.slice(0,3).map(h=>`<div>• ${h.guest_name} · ${h.event_type||'—'} · ${h.event_date||'TBD'} · ${h.status}</div>`).join('');
+    document.getElementById('inq-repeat-list').innerHTML=prev.slice(0,3).map(h=>`<div>• ${h.guest_name} · ${h.event_type||'—'} · ${fmtDate(h.event_date)||'TBD'} · ${h.status}</div>`).join('');
   }
 }
 function checkVenueCap(){
