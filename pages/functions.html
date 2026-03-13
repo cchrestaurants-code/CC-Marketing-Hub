@@ -82,6 +82,7 @@
     </div>
     <div class="tb-r">
       <span class="fy-chip">LKR · FY 2026–27</span>
+      <button class="btn btn-out btn-sm" onclick="openImport()" title="Import from Excel">📥 Import</button>
       <button class="btn btn-out" onclick="openQuickAdd()" title="Fast capture while on a call">⚡ Quick Add</button>
       <button class="btn btn-gold" onclick="openFullModal()">+ Add Inquiry</button>
     </div>
@@ -779,7 +780,7 @@ function renderInquiries() {
       ${fuChip}
       <div style="margin-top:9px">
         <div class="inq-detail-row"><span class="dl">Event Type</span><span class="dv">${inq.event_type||'—'}</span></div>
-        <div class="inq-detail-row"><span class="dl">Event Date</span><span class="dv">${inq.event_date||'TBD'}</span></div>
+        <div class="inq-detail-row"><span class="dl">Event Date</span><span class="dv">${fmtDate(inq.event_date)||'TBD'}</span></div>
         <div class="inq-detail-row"><span class="dl">Venue</span><span class="dv">${inq.venue||'—'} ${capWarn}</span></div>
         <div class="inq-detail-row"><span class="dl">Pax</span><span class="dv">${pax||'—'}</span></div>
         <div class="inq-detail-row"><span class="dl">Menu</span><span class="dv">${inq.menu_type||'—'}</span></div>
@@ -806,11 +807,11 @@ function renderInquiries() {
     const fuStyle  = fDate&&fDate<today2&&['Pending','Details Shared','Postponed'].includes(inq.status)?'color:var(--red);font-weight:600':
                      fDate===today2?'color:var(--amber);font-weight:600':'';
     rows += `<tr>
-      <td>${inq.inquiry_date||'—'}</td>
+      <td>${fmtDate(inq.inquiry_date)||'—'}</td>
       <td style="font-weight:600;white-space:nowrap">${inq.guest_name||'—'}${isRepeat?' <span class="repeat-badge" style="font-size:8px">RPT</span>':''}</td>
       <td>${inq.phone||'—'}</td>
       <td><span class="pill pg">${inq.event_type||'—'}</span></td>
-      <td>${inq.event_date||'—'}</td>
+      <td>${fmtDate(inq.event_date)||'—'}</td>
       <td style="font-size:11px">${inq.venue||'—'}</td>
       <td class="mono">${inq.pax||'—'}</td>
       <td style="font-size:11px">${inq.menu_type||'—'}</td>
@@ -971,7 +972,7 @@ function renderBudget(){
   let eRows='';
   mConf.sort((a,b)=>new Date(a.event_date||0)-new Date(b.event_date||0)).forEach(x=>{
     const tot=Number(x.food_revenue||0)+Number(x.bev_revenue||0);
-    eRows+=`<tr><td>${x.event_date||'—'}</td><td style="font-weight:600">${x.guest_name||'—'}</td><td><span class="pill pg">${x.event_type||'—'}</span></td><td style="font-size:11px">${x.venue||'—'}</td><td class="mono">${x.pax||'—'}</td><td style="font-size:11px">${x.menu_type||'—'}</td><td class="mono" style="color:var(--green);font-weight:600">${fmt(x.food_revenue)}</td><td class="mono" style="color:var(--blue);font-weight:600">${fmt(x.bev_revenue)}</td><td class="mono" style="font-weight:700;color:var(--gold)">${fmt(tot)}</td><td><button class="btn btn-edit btn-sm" onclick="editInquiry('${x.id}')">Edit</button></td></tr>`;
+    eRows+=`<tr><td>${fmtDate(x.event_date)||'—'}</td><td style="font-weight:600">${x.guest_name||'—'}</td><td><span class="pill pg">${x.event_type||'—'}</span></td><td style="font-size:11px">${x.venue||'—'}</td><td class="mono">${x.pax||'—'}</td><td style="font-size:11px">${x.menu_type||'—'}</td><td class="mono" style="color:var(--green);font-weight:600">${fmt(x.food_revenue)}</td><td class="mono" style="color:var(--blue);font-weight:600">${fmt(x.bev_revenue)}</td><td class="mono" style="font-weight:700;color:var(--gold)">${fmt(tot)}</td><td><button class="btn btn-edit btn-sm" onclick="editInquiry('${x.id}')">Edit</button></td></tr>`;
   });
   if(mConf.length){
     const tF=mConf.reduce((a,x)=>a+Number(x.food_revenue||0),0);
@@ -1024,7 +1025,7 @@ function liveGuestSearch(val, ctx){
   document.getElementById(ctx+'-search-results').innerHTML=matches.map(x=>`
     <div class="guest-search-result" onclick="prefillFromGuest('${x.id}','${ctx}')">
       <div class="gsname">${x.guest_name} <span class="repeat-badge">RETURNING GUEST</span></div>
-      <div class="gssub">${x.phone} · Last: ${x.event_type||'Unknown'} on ${x.event_date||'TBD'} · ${x.status}</div>
+      <div class="gssub">${x.phone} · Last: ${x.event_type||'Unknown'} on ${fmtDate(x.event_date)||'TBD'} · ${x.status}</div>
     </div>`).join('');
 }
 function prefillFromGuest(id,ctx){
@@ -1293,6 +1294,117 @@ async function saveFuncBudget(){
 }
 
 load();
+
+// ── EXCEL IMPORT ──────────────────────────────────────
+function openImport(){ openM('m-import'); }
+function closeImport(){ closeM('m-import'); document.getElementById('imp-preview').innerHTML=''; document.getElementById('imp-file').value=''; }
+
+let importRows = [];
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const fi = document.getElementById('imp-file');
+  if(fi) fi.addEventListener('change', handleImportFile);
+});
+
+async function handleImportFile(e){
+  const file = e.target.files[0]; if(!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const preview = document.getElementById('imp-preview');
+  preview.innerHTML = '<div style="color:var(--text-2);font-size:11.5px;padding:8px">Parsing file…</div>';
+  importRows = [];
+
+  if(ext === 'csv'){
+    const text = await file.text();
+    const rows = text.split('\n').filter(Boolean);
+    const headers = rows[0].split(',').map(h=>h.replace(/^"|"$/g,'').trim());
+    importRows = rows.slice(1).map(row=>{
+      const vals = row.split(',').map(v=>v.replace(/^"|"$/g,'').trim());
+      const obj = {};
+      headers.forEach((h,i)=>obj[h]=vals[i]||'');
+      return obj;
+    });
+  } else {
+    preview.innerHTML='<div class="alert al-a">Please use a CSV file. To convert Excel: File → Save As → CSV (UTF-8).</div>';
+    return;
+  }
+
+  if(!importRows.length){ preview.innerHTML='<div class="alert al-r">No data rows found.</div>'; return; }
+
+  // Show preview
+  const cols = Object.keys(importRows[0]).slice(0,8);
+  let html = `<div style="font-size:11.5px;color:var(--text-2);margin-bottom:8px">${importRows.length} rows found. Preview (first 5):</div>`;
+  html += '<div class="overflow-x"><table><thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
+  importRows.slice(0,5).forEach(r=>{ html+='<tr>'+cols.map(c=>`<td style="font-size:11px">${r[c]||''}</td>`).join('')+'</tr>'; });
+  html += '</tbody></table></div>';
+  html += `<div style="margin-top:10px;font-size:11.5px;color:var(--amber)">⚠ Map your column names: the importer looks for columns named <strong>guest_name, phone, event_type, event_date, pax, venue, menu_type, status, source, remarks, food_revenue, bev_revenue, inquiry_date</strong>. Rename your Excel headers to match before importing.</div>`;
+  preview.innerHTML = html;
+}
+
+async function doImport(){
+  if(!importRows.length){ toast('No data to import.','e'); return; }
+  showLoader(`Importing ${importRows.length} rows…`);
+  let ok=0, fail=0;
+  for(const row of importRows){
+    try{
+      const iDate = fmtDate(row.inquiry_date||row['Inquiry Date']||row['Date']||new Date().toISOString().split('T')[0]);
+      const p = {
+        fy:FY, fy_month:iDate?fyIdx(iDate):fyIdxNow(),
+        inquiry_date: iDate,
+        guest_name:   row.guest_name||row['Guest Name']||row['Name']||'',
+        phone:        row.phone||row['Phone']||row['Contact']||'',
+        email:        row.email||row['Email']||'',
+        source:       row.source||row['Source']||row['How Found Us']||'',
+        event_type:   row.event_type||row['Event Type']||'',
+        event_date:   fmtDate(row.event_date||row['Event Date']||''),
+        pax:          parseInt(row.pax||row['Pax']||row['Guest Count']||0)||0,
+        venue:        row.venue||row['Venue']||'',
+        menu_type:    row.menu_type||row['Menu Type']||row['Menu']||'',
+        food_revenue: parseFloat(row.food_revenue||row['Food Revenue']||0)||0,
+        bev_revenue:  parseFloat(row.bev_revenue||row['Bev Revenue']||row['Beverage Revenue']||0)||0,
+        total_revenue:parseFloat(row.total_revenue||0)||0,
+        status:       row.status||row['Status']||'Pending',
+        followup_date:fmtDate(row.followup_date||row['Follow Up Date']||''),
+        remarks:      row.remarks||row['Remarks']||row['Notes']||'',
+        repeat_of:'', lost_reason:''
+      };
+      if(!p.guest_name){ fail++; continue; }
+      await DB.add('FUNC_INQUIRIES', p);
+      ok++;
+    }catch(e){ fail++; }
+  }
+  await reloadData();
+  closeImport();
+  renderInqMonthTabs(); renderFollowupAlerts(); renderInquiries();
+  toast(`Import complete: ${ok} added, ${fail} skipped.`, ok>0?'s':'e');
+  hideLoader();
+}
 </script>
+
+<!-- EXCEL IMPORT MODAL -->
+<div class="overlay" id="m-import">
+  <div class="modal wide">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-t">📥 Import from CSV / Excel</div>
+        <div style="font-size:10.5px;color:var(--text-2);margin-top:2px">Upload previous years' inquiry data in bulk</div>
+      </div>
+      <button class="modal-x" onclick="closeImport()">×</button>
+    </div>
+    <div class="modal-bd">
+      <div class="alert al-a" style="margin-bottom:14px">
+        <div><strong>How to import from Excel:</strong><br>
+        1. Open your Excel file → File → Save As → CSV UTF-8<br>
+        2. Rename column headers to match: <code>guest_name, phone, event_type, event_date, pax, venue, status, source, remarks, food_revenue, bev_revenue, inquiry_date</code><br>
+        3. Upload the CSV file below</div>
+      </div>
+      <div class="fr"><label>Select CSV File</label><input type="file" id="imp-file" accept=".csv,.txt" style="padding:6px;cursor:pointer"></div>
+      <div id="imp-preview" style="margin-top:8px"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-out" onclick="closeImport()">Cancel</button>
+      <button class="btn btn-gold" onclick="doImport()">Import Rows →</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
