@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // CONFIGURATION — replace with your deployed Apps Script URL
 // ═══════════════════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycbwK9M4ZW_BvglI_Jnuc4d4gwRNOlrK7NxihaYwn_7ct4OgvRh2mwwfycTvmhQ5qs--J6Q/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycby1CGlqa0zQIw6mca9ytyXqEIF-aFo4ZjGExrFRxXNreqM1NIdxpppKqKaqDeGXVoxqNQ/exec';
 
 // ── FY CONFIGURATION ──────────────────────────────────────
 // Supported FY years — add future years here as needed
