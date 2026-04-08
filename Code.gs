@@ -25,6 +25,7 @@ const SHEETS = {
   FUNC_INQUIRIES:   'FuncInquiries',
   FUNC_BUDGETS:      'FuncBudgets',
   VOUCHERS:          'Vouchers',
+  INF_PERF:          'InfluencerPerf',
   KISS_FM_VOUCHERS:  'KissFMVouchers',
 };
 
@@ -443,6 +444,7 @@ function addV4Sheets() {
   const schema = {
     Vouchers: ['id','fy','fy_month','voucher_code','voucher_type','sub_type','issued_to','requested_by','issue_date','valid_from','expiry_date','redeem_date','status','notes','created_at','updated_at'],
     KissFMVouchers: ['id','fy','fy_month','voucher_code','voucher_type','issued_to','issue_date','valid_from','expiry_date','redeem_date','status','notes','source','created_at','updated_at'],
+    InfluencerPerf: ['id','fy','fy_month','influencer_id','post_date','campaign','content_type','reach','impressions','likes','comments','shares','saves','engagement_rate','post_url','notes','created_at','updated_at'],
   };
   Object.entries(schema).forEach(([name,headers])=>{
     let s=ss.getSheetByName(name);
